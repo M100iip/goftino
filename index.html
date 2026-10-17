@@ -3,29 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>گفتینو | پیام‌رسان</title>
+<title>گفتینو | پیام‌رسان خصوصی</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Tahoma,Arial;background:#101827;color:#fff}
+body{margin:0;background:#101827;color:white;font-family:Tahoma,Arial}
 button,input{font:inherit}
-button{cursor:pointer;border:0;border-radius:10px;padding:12px;background:#38bdf8;color:#082032;font-weight:bold}
+button{border:0;border-radius:10px;padding:12px;background:#38bdf8;color:#082032;font-weight:bold;cursor:pointer}
 input{width:100%;padding:13px;margin:7px 0;border:1px solid #34445b;border-radius:10px;background:#1b2739;color:white}
 .card{background:#1b2739;padding:22px;border-radius:18px;margin:20px auto;max-width:460px}
 h1{color:#38bdf8;text-align:center}
 small,.muted{color:#aab8cc}
 .hidden{display:none!important}
 .row{display:flex;gap:8px}
-.row>*{flex:1}
-#app{max-width:900px;margin:auto;padding:12px}
-header{display:flex;justify-content:space-between;align-items:center;padding:10px}
+.row>*{flex:1;min-width:0}
+#app{max-width:950px;margin:auto;padding:12px}
+header{display:flex;justify-content:space-between;align-items:center}
 .layout{display:grid;grid-template-columns:260px 1fr;gap:12px}
 .panel{background:#1b2739;border-radius:16px;padding:14px;min-width:0}
 .person{padding:12px;border-radius:10px;background:#25354b;margin:7px 0;cursor:pointer;overflow-wrap:anywhere}
-#messages{height:48vh;overflow:auto;display:flex;flex-direction:column;gap:9px;padding:10px}
+#messages{height:45vh;overflow:auto;display:flex;flex-direction:column;gap:9px;padding:10px}
 .msg{background:#25354b;padding:11px;border-radius:12px;max-width:85%;overflow-wrap:anywhere}
 .mine{background:#075985;align-self:flex-start}
-#status{color:#fbbf24;line-height:1.8}
+#status,#chatStatus{line-height:1.8;color:#fbbf24;overflow-wrap:anywhere}
 @media(max-width:650px){.layout{grid-template-columns:1fr}#messages{height:38vh}}
 </style>
 </head>
@@ -36,7 +36,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 <p class="muted">پیام‌رسان خصوصی شما</p>
 <input id="email" type="email" placeholder="ایمیل">
 <input id="password" type="password" placeholder="رمز عبور (حداقل ۶ نویسه)">
-<input id="username" placeholder="نام کاربری (برای ثبت‌نام)">
+<input id="username" placeholder="نام کاربری (فقط برای ثبت‌نام)">
 <div class="row">
 <button onclick="signup()">ثبت‌نام</button>
 <button onclick="login()">ورود</button>
@@ -49,7 +49,6 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 <div><h2>💬 گفتینو</h2><small id="myname"></small></div>
 <button onclick="logout()">خروج</button>
 </header>
-
 <div class="layout">
 <aside class="panel">
 <h3>🔎 پیدا کردن کاربر</h3>
@@ -60,7 +59,6 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 <h3>گفت‌وگوهای من</h3>
 <div id="chats"></div>
 </aside>
-
 <main class="panel">
 <h3 id="chatTitle">یک گفت‌وگو انتخاب کن</h3>
 <div id="messages"></div>
@@ -77,64 +75,143 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 const SUPABASE_URL = "https://sptqoxmschaywfamqfso.supabase.co";
 const SUPABASE_KEY = "sb_publishable_gIp4Qtlha0eq2gJ_gEroRg_oAP6goVg";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const REDIRECT_URL = "https://m100iip.github.io/goftino/";
 
 let me = null;
 let activeChat = null;
 let activeOther = null;
 let poller = null;
 
-function say(t){document.getElementById('status').textContent=t}
-function chatSay(t){document.getElementById('chatStatus').textContent=t}
+function say(t){
+  document.getElementById('status').textContent=t;
+}
+function chatSay(t){
+  document.getElementById('chatStatus').textContent=t;
+}
 
 async function signup(){
   const email=document.getElementById('email').value.trim();
   const password=document.getElementById('password').value;
   const username=document.getElementById('username').value.trim().toLowerCase();
-  if(!email||password.length<6||!username){
-    say('ایمیل، رمز حداقل ۶ نویسه و نام کاربری را وارد کن.');return;
+
+  if(!email || password.length<6 || !username){
+    say('ایمیل، رمز حداقل ۶ نویسه و نام کاربری را وارد کن.');
+    return;
   }
+
   if(!/^[a-z0-9_]{3,24}$/.test(username)){
-    say('نام کاربری باید ۳ تا ۲۴ حرف انگلیسی، عدد یا _ باشد.');return;
+    say('نام کاربری باید ۳ تا ۲۴ حرف انگلیسی، عدد یا _ باشد.');
+    return;
   }
+
   say('در حال ثبت‌نام...');
-  const {data,error}=await db.auth.signUp({email,password});
+
+  const {data,error}=await db.auth.signUp({
+    email: email,
+    password: password,
+    options: {
+      emailRedirectTo: REDIRECT_URL,
+      data: { username: username }
+    }
+  });
+
   if(error){say(error.message);return;}
   if(!data.user){say('ثبت‌نام انجام نشد. دوباره تلاش کن.');return;}
+
   if(!data.session){
-    say('حساب ساخته شد؛ ایمیلت را تأیید کن، سپس وارد شو.');return;
+    say('حساب ساخته شد؛ ایمیلت را تأیید کن، سپس وارد شو.');
+    return;
   }
+
   const {error:pe}=await db.from('profiles').insert({
-    id:data.user.id,username
+    id:data.user.id,
+    username:username
   });
-  if(pe){say('حساب ساخته شد، اما ساخت نام کاربری ناموفق بود: '+pe.message);return;}
+
+  if(pe){
+    say('حساب ساخته شد، اما ذخیره نام کاربری ناموفق بود: '+pe.message);
+    return;
+  }
+
   await startApp(data.user);
 }
 
 async function login(){
   const email=document.getElementById('email').value.trim();
   const password=document.getElementById('password').value;
+
+  if(!email || !password){
+    say('ایمیل و رمز عبور را وارد کن.');
+    return;
+  }
+
   say('در حال ورود...');
+
   const {data,error}=await db.auth.signInWithPassword({email,password});
   if(error){say(error.message);return;}
-  await startApp(data.user);
+
+  await ensureProfile(data.user);
 }
 
-async function startApp(user){
+async function ensureProfile(user){
   me=user;
-  const {data:profile,error}=await db.from('profiles')
-    .select('username').eq('id',me.id).maybeSingle();
-  if(error){say('خطا در دریافت پروفایل: '+error.message);return;}
-  if(!profile){
-    say('حساب وارد شد، اما پروفایل ندارد. اگر قبلاً ثبت‌نام کرده‌ای، باید نام کاربری برای حسابت ساخته شود.');return;
+
+  let {data:profile,error}=await db.from('profiles')
+    .select('id,username')
+    .eq('id',user.id)
+    .maybeSingle();
+
+  if(error){
+    say('خطا در دریافت پروفایل: '+error.message);
+    return;
   }
+
+  if(!profile){
+    const username=document.getElementById('username').value.trim().toLowerCase();
+
+    if(!/^[a-z0-9_]{3,24}$/.test(username)){
+      say('حساب وارد شد. برای ساخت پروفایل، خارج شو و در قسمت نام کاربری یک نام انگلیسی ۳ تا ۲۴ حرفی وارد کن و دوباره وارد شو.');
+      return;
+    }
+
+    const {data:newProfile,error:pe}=await db.from('profiles')
+      .insert({id:user.id,username})
+      .select('id,username')
+      .single();
+
+    if(pe){
+      say('ساخت پروفایل ناموفق بود: '+pe.message);
+      return;
+    }
+    profile=newProfile;
+  }
+
+  await startApp(user,profile);
+}
+
+async function startApp(user,profile=null){
+  me=user;
+
+  if(!profile){
+    const {data,error}=await db.from('profiles')
+      .select('id,username')
+      .eq('id',user.id)
+      .maybeSingle();
+
+    if(error){say(error.message);return;}
+    if(!data){say('پروفایل کاربر پیدا نشد.');return;}
+    profile=data;
+  }
+
   document.getElementById('auth').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('myname').textContent='@'+profile.username;
+
   await loadChats();
 }
 
 async function logout(){
-  if(poller)clearInterval(poller);
+  if(poller) clearInterval(poller);
   await db.auth.signOut();
   location.reload();
 }
@@ -143,16 +220,24 @@ async function findUsers(){
   const q=document.getElementById('search').value.trim().toLowerCase();
   const box=document.getElementById('users');
   box.innerHTML='';
-  if(q.length<1){box.textContent='نام کاربری را وارد کن.';return;}
-  const {data,error}=await db.from('profiles').select('id,username')
-    .ilike('username','%'+q+'%').limit(20);
-  if(error){box.textContent=error.message;return;}
+
+  if(!q){box.textContent='نام کاربری را وارد کن.';return;}
+
+  const {data,error}=await db.from('profiles')
+    .select('id,username')
+    .ilike('username','%'+q+'%')
+    .limit(20);
+
+  if(error){box.textContent='خطا: '+error.message;return;}
+
   const people=(data||[]).filter(p=>p.id!==me.id);
+
   if(!people.length){box.textContent='کاربری پیدا نشد.';return;}
+
   people.forEach(p=>{
     const el=document.createElement('div');
     el.className='person';
-    el.textContent='@'+p.username+'  ＋ گفت‌وگو';
+    el.textContent='@'+p.username+' ＋ شروع گفت‌وگو';
     el.onclick=()=>openChat(p);
     box.appendChild(el);
   });
@@ -160,26 +245,37 @@ async function findUsers(){
 
 async function openChat(other){
   chatSay('در حال باز کردن گفت‌وگو...');
+
   let {data:rows,error}=await db.from('private_chats')
     .select('id,user1,user2')
     .or('user1.eq.'+me.id+',user2.eq.'+me.id);
-  if(error){chatSay(error.message);return;}
+
+  if(error){chatSay('خطا: '+error.message);return;}
+
   let chat=(rows||[]).find(c=>
-    (c.user1===me.id&&c.user2===other.id)||
-    (c.user2===me.id&&c.user1===other.id)
+    (c.user1===me.id && c.user2===other.id) ||
+    (c.user2===me.id && c.user1===other.id)
   );
+
   if(!chat){
     const {data:newChat,error:ce}=await db.from('private_chats')
-      .insert({user1:me.id,user2:other.id}).select().single();
+      .insert({user1:me.id,user2:other.id})
+      .select()
+      .single();
+
     if(ce){chatSay('ساخت گفت‌وگو ناموفق بود: '+ce.message);return;}
     chat=newChat;
   }
+
   activeChat=chat.id;
   activeOther=other;
+
   document.getElementById('chatTitle').textContent='گفت‌وگو با @'+other.username;
+
   await loadMessages();
   await loadChats();
-  if(poller)clearInterval(poller);
+
+  if(poller) clearInterval(poller);
   poller=setInterval(loadMessages,4000);
 }
 
@@ -187,14 +283,22 @@ async function loadChats(){
   const {data,error}=await db.from('private_chats')
     .select('id,user1,user2')
     .or('user1.eq.'+me.id+',user2.eq.'+me.id);
+
   const box=document.getElementById('chats');
   box.innerHTML='';
-  if(error){box.textContent=error.message;return;}
+
+  if(error){box.textContent='خطا: '+error.message;return;}
+
   for(const c of (data||[])){
     const otherId=c.user1===me.id?c.user2:c.user1;
-    const {data:p}=await db.from('profiles').select('id,username')
-      .eq('id',otherId).maybeSingle();
+
+    const {data:p}=await db.from('profiles')
+      .select('id,username')
+      .eq('id',otherId)
+      .maybeSingle();
+
     if(!p)continue;
+
     const el=document.createElement('div');
     el.className='person';
     el.textContent='@'+p.username;
@@ -205,38 +309,54 @@ async function loadChats(){
 
 async function loadMessages(){
   if(!activeChat)return;
+
   const {data,error}=await db.from('private_messages')
     .select('id,sender_id,content,created_at')
-    .eq('chat_id',activeChat).order('created_at',{ascending:true});
-  if(error){chatSay(error.message);return;}
+    .eq('chat_id',activeChat)
+    .order('created_at',{ascending:true});
+
+  if(error){chatSay('دریافت پیام‌ها ناموفق بود: '+error.message);return;}
+
   const box=document.getElementById('messages');
   box.innerHTML='';
+
   (data||[]).forEach(m=>{
     const el=document.createElement('div');
     el.className='msg '+(m.sender_id===me.id?'mine':'');
     el.textContent=m.content;
     box.appendChild(el);
   });
+
   box.scrollTop=box.scrollHeight;
   chatSay('');
 }
 
 async function sendMessage(){
-  if(!activeChat){chatSay('ابتدا یک گفت‌وگو انتخاب کن.');return;}
+  if(!activeChat){
+    chatSay('ابتدا یک گفت‌وگو انتخاب کن.');
+    return;
+  }
+
   const input=document.getElementById('message');
   const content=input.value.trim();
   if(!content)return;
+
   const {error}=await db.from('private_messages').insert({
-    chat_id:activeChat,sender_id:me.id,content
+    chat_id:activeChat,
+    sender_id:me.id,
+    content:content
   });
+
   if(error){chatSay('ارسال ناموفق: '+error.message);return;}
+
   input.value='';
   await loadMessages();
 }
 
-db.auth.getSession().then(({data})=>{
-  if(data.session)startApp(data.session.user);
+db.auth.getSession().then(({data,error})=>{
+  if(error){say(error.message);return;}
+  if(data.session) ensureProfile(data.session.user);
 });
 </script>
 </body>
- </html>
+  </html>
